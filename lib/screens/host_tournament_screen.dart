@@ -39,6 +39,8 @@ class _HostTournamentScreenState extends State<HostTournamentScreen> {
           'timestamp': FieldValue.serverTimestamp(),
         });
 
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("🎉 Tournament Hosted Successfully")),
         );
@@ -49,6 +51,8 @@ class _HostTournamentScreenState extends State<HostTournamentScreen> {
         _entryFeeController.clear();
         _dateController.clear();
       } catch (e) {
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("⚠️ Failed to save: $e")),
         );

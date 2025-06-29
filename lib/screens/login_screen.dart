@@ -9,74 +9,55 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _auth = FirebaseAuth.instance;
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
-  String email = '';
-  String password = '';
-  bool isLoading = false;
-
-  void _login() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => isLoading = true);
+  Future<void> login() async {
     try {
-      await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password.trim(),
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
 
-      // TODO: Replace this with your actual home screen route
+      if (!mounted) return; // ✅ Prevent context errors
       Navigator.pushReplacementNamed(context, '/home');
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message ?? 'Login failed')));
-    } finally {
-      setState(() => isLoading = false);
+    } catch (e) {
+      if (!mounted) return; // ✅ Also needed here
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Login")),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: "Email"),
-                      onChanged: (val) => email = val,
-                      validator: (val) =>
-                          val != null && val.contains('@') ? null : "Enter valid email",
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: "Password"),
-                      obscureText: true,
-                      onChanged: (val) => password = val,
-                      validator: (val) =>
-                          val != null && val.length >= 6 ? null : "Password too short",
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _login,
-                      child: const Text("Login"),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/signup');
-                      },
-                      child: const Text("Don't have an account? Sign up"),
-                    ),
-                  ],
-                ),
-              ),
+      appBar: AppBar(title: const Text('Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
             ),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: login,
+              child: const Text('Login'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/signup'),
+              child: const Text("Don't have an account? Sign up"),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

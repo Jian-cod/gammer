@@ -1,100 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _auth = FirebaseAuth.instance;
+class _SignupScreenState extends State<SignupScreen> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
-  String username = '';
-  String email = '';
-  String password = '';
-  bool isLoading = false;
-
-  void _signUp() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => isLoading = true);
+  Future<void> signup() async {
     try {
-      final userCred = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password.trim(),
+      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCred.user!.uid)
-          .set({
-        'username': username.trim(),
-        'email': email.trim(),
-        'role': 'user', // default role
-        'createdAt': Timestamp.now(),
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+        'email': emailController.text.trim(),
+        'role': 'user',
       });
 
-      Navigator.pushReplacementNamed(context, '/login');
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message ?? 'Signup failed')));
-    } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Signup failed: $e')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Sign Up")),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: "Username"),
-                      onChanged: (val) => username = val,
-                      validator: (val) =>
-                          val == null || val.isEmpty ? "Enter username" : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: "Email"),
-                      onChanged: (val) => email = val,
-                      validator: (val) =>
-                          val != null && val.contains('@') ? null : "Enter valid email",
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: "Password"),
-                      obscureText: true,
-                      onChanged: (val) => password = val,
-                      validator: (val) =>
-                          val != null && val.length >= 6 ? null : "Password too short",
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _signUp,
-                      child: const Text("Create Account"),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/login');
-                      },
-                      child: const Text("Already have an account? Login"),
-                    ),
-                  ],
-                ),
-              ),
+      appBar: AppBar(title: const Text('Signup')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
             ),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: signup, child: const Text('Sign Up')),
+          ],
+        ),
+      ),
     );
   }
 }

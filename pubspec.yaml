@@ -1,4 +1,4 @@
-name: gammer
+name: gammer_fixed
 description: GAMMER app with videos, tournaments, and livestream.
 
 publish_to: "none"

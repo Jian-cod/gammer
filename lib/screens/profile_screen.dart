@@ -1,5 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/navigation_drawer.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -11,30 +12,25 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        centerTitle: true,
       ),
+      drawer: const NavigationDrawerWidget(),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Avatar image from assets
-            const CircleAvatar(
-              radius: 60,
-              backgroundImage: AssetImage('assets/avatar.png'),
-            ),
+            const Icon(Icons.person, size: 100, color: Colors.white),
             const SizedBox(height: 20),
-            // Display user email
             Text(
               user?.email ?? 'No email',
-              style: const TextStyle(fontSize: 20),
+              style: const TextStyle(fontSize: 18),
             ),
-            const SizedBox(height: 40),
-            // Logout button
+            const SizedBox(height: 30),
             ElevatedButton(
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
-                Navigator.pushNamedAndRemoveUntil(
-                    context, '/login', (route) => false);
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                }
               },
               child: const Text('Logout'),
             ),
