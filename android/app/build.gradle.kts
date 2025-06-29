@@ -16,6 +16,9 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        // ✅ Enable FCM auto init
+        manifestPlaceholders["firebase_messaging_auto_init_enabled"] = true
     }
 
     compileOptions {

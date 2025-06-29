@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:video_player/video_player.dart';
+import 'reply_screen.dart'; // ✅ Add this import for reply functionality
 
 class VideoFeedScreen extends StatelessWidget {
   const VideoFeedScreen({super.key});
@@ -64,7 +66,6 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   void initState() {
     super.initState();
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-
       ..initialize().then((_) {
         setState(() {});
         _controller.play();
@@ -75,8 +76,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   }
 
   void _likeVideo() async {
-    final videoRef =
-        FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
+    final videoRef = FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
     await videoRef.update({'likes': FieldValue.increment(1)});
     setState(() {
       _likes += 1;
@@ -85,6 +85,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
   void _showCommentsDialog() {
     final commentController = TextEditingController();
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
 
     showModalBottomSheet(
       context: context,
@@ -110,13 +111,33 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) return const CircularProgressIndicator();
                     final comments = snapshot.data!.docs;
+
                     return SizedBox(
                       height: 200,
                       child: ListView.builder(
                         itemCount: comments.length,
                         itemBuilder: (context, index) {
-                          final comment = comments[index]['text'];
-                          return ListTile(title: Text(comment));
+                          final comment = comments[index];
+                          final text = comment['text'];
+                          final commentId = comment.id;
+
+                          return ListTile(
+                            title: Text(text),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.reply, color: Colors.blue),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ReplyScreen(
+                                      videoId: widget.videoId,
+                                      commentId: commentId,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
                         },
                       ),
                     );
@@ -143,6 +164,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                                 .collection('comments')
                                 .add({
                               'text': text,
+                              'uid': uid,
                               'timestamp': FieldValue.serverTimestamp(),
                             });
                             commentController.clear();
