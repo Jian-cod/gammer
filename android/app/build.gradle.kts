@@ -1,33 +1,21 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("com.google.gms.google-services") // ✅ Firebase plugin
+    id("com.google.gms.google-services")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.example.gammer_fixed"
-    compileSdk = 34
-    ndkVersion = "27.0.12077973"
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.gammer_fixed"
         minSdk = 21
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
-        // ✅ Enable FCM auto init
-        manifestPlaceholders["firebase_messaging_auto_init_enabled"] = true
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = "11"
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -35,8 +23,19 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    kotlinOptions {
+        jvmTarget = "11"
+    }
 }
 
-flutter {
-    source = "../.."
+dependencies {
+    // Required for Java 8+ features used by some plugins like flutter_local_notifications
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/navigation_drawer.dart';
+import 'app_drawer.dart'; // ✅ Correct path (if in same folder)
+
 
 class VideosScreen extends StatelessWidget {
   const VideosScreen({super.key});
@@ -7,18 +8,15 @@ class VideosScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const NavigationDrawerWidget(),
       appBar: AppBar(
-        title: const Text('Watch Videos'),
+        title: const Text('Videos'),
+        backgroundColor: Colors.black,
       ),
+      drawer: const AppDrawer(), // ← Make sure this is added
       body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.video_library, size: 100),
-            SizedBox(height: 20),
-            Text("Coming Soon", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          ],
+        child: Text(
+          'Video Feed Coming Soon',
+          style: TextStyle(fontSize: 20),
         ),
       ),
     );

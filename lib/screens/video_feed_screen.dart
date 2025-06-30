@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:video_player/video_player.dart';
-import 'reply_screen.dart'; // ✅ Add this import for reply functionality
+import 'reply_screen.dart';
+import 'app_drawer.dart'; // ✅ Drawer menu
 
 class VideoFeedScreen extends StatelessWidget {
   const VideoFeedScreen({super.key});
@@ -10,7 +11,11 @@ class VideoFeedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Video Feed')),
+      appBar: AppBar(
+        title: const Text('GAMMER - Videos'),
+        backgroundColor: Colors.black,
+      ),
+      drawer: const AppDrawer(), // ✅ Added drawer here
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('videos')

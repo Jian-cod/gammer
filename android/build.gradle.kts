@@ -2,11 +2,12 @@
 
 buildscript {
     repositories {
-        google()  // ✅ REQUIRED to resolve Google dependencies
+        google()
         mavenCentral()
     }
     dependencies {
         classpath("com.google.gms:google-services:4.4.1") // ✅ Firebase plugin
+        classpath("com.android.tools.build:gradle:8.4.0") // ✅ Updated AGP for Gradle 8.9
     }
 }
 

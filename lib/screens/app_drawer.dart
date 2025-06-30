@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'video_feed_screen.dart';
-import 'upload_screen.dart';
-import 'live_stream_screen.dart';
-import 'profile_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -24,22 +20,37 @@ class AppDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.ondemand_video, color: Colors.white),
             title: const Text('Watch Videos'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VideoFeedScreen())),
+            onTap: () => Navigator.pushNamed(context, '/home'),
           ),
           ListTile(
             leading: const Icon(Icons.file_upload, color: Colors.white),
             title: const Text('Upload Video'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadScreen())),
+            onTap: () => Navigator.pushNamed(context, '/upload'),
           ),
           ListTile(
             leading: const Icon(Icons.live_tv, color: Colors.white),
-            title: const Text('Go Live / Watch Live'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamScreen())),
+            title: const Text('Go Live'),
+            onTap: () => Navigator.pushNamed(context, '/live'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.emoji_events, color: Colors.white),
+            title: const Text('Create Tournament'),
+            onTap: () => Navigator.pushNamed(context, '/create_tournament'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.group, color: Colors.white),
+            title: const Text('Join Tournament'),
+            onTap: () => Navigator.pushNamed(context, '/join_tournament'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings, color: Colors.white),
+            title: const Text('Host Tournament'),
+            onTap: () => Navigator.pushNamed(context, '/host_tournament'),
           ),
           ListTile(
             leading: const Icon(Icons.person, color: Colors.white),
             title: const Text('Profile'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            onTap: () => Navigator.pushNamed(context, '/profile'),
           ),
         ],
       ),
