@@ -70,37 +70,29 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
       return;
     }
 
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
+    try {
+      // Get user name from Firestore users collection
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final name = userDoc.exists
+          ? userDoc['name'] ?? user.email ?? 'Anonymous'
+          : user.email ?? 'Anonymous';
 
-    final displayName = userDoc.data()?['displayName'] ?? user.email ?? 'Unknown';
+      final tournamentRef = FirebaseFirestore.instance.collection('tournaments').doc(doc.id);
 
-    final docRef = FirebaseFirestore.instance.collection('tournaments').doc(doc.id);
-    final snapshot = await docRef.get();
-    final data = snapshot.data() as Map<String, dynamic>;
+      await tournamentRef.update({
+        'participants': FieldValue.arrayUnion([name])
+      });
 
-    final List currentParticipants = data['participants'] ?? [];
-
-    if (currentParticipants.contains(displayName)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ You already joined this tournament")),
+        const SnackBar(content: Text("✅ You have joined the tournament!")),
       );
-      return;
+
+      setState(() {}); // Refresh to show participant
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Failed to join: $e")),
+      );
     }
-
-    await docRef.update({
-      'participants': FieldValue.arrayUnion([displayName])
-    });
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("✅ Successfully joined")),
-    );
-
-    setState(() {});
   }
 
   @override
@@ -139,67 +131,57 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
             ),
           ),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                _tournaments.clear();
-                _lastDoc = null;
-                _hasMore = true;
-                await _loadTournaments(isRefresh: true);
-              },
-              child: ListView.builder(
-                itemCount: filteredTournaments.length + 1,
-                itemBuilder: (context, index) {
-                  if (index < filteredTournaments.length) {
-                    final doc = filteredTournaments[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    final participants = List<String>.from(data['participants'] ?? []);
+            child: ListView.builder(
+              itemCount: filteredTournaments.length + 1,
+              itemBuilder: (context, index) {
+                if (index < filteredTournaments.length) {
+                  final doc = filteredTournaments[index];
+                  final data = doc.data() as Map<String, dynamic>;
+                  final participants = List<String>.from(data['participants'] ?? []);
 
-                    return Card(
-                      color: Colors.grey[900],
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: ListTile(
-                        title: Text(data['title'] ?? 'Untitled',
-                            style: const TextStyle(fontSize: 18, color: Colors.white)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Game: ${data['game'] ?? 'N/A'}",
-                                style: const TextStyle(color: Colors.white70)),
-                            Text("Host: ${data['hostedBy'] ?? 'N/A'}",
-                                style: const TextStyle(color: Colors.white70)),
-                            Text("Entry Fee: ${data['entryFee']} KES",
-                                style: const TextStyle(color: Colors.white70)),
-                            Text("Date: ${data['date'] ?? 'N/A'}",
-                                style: const TextStyle(color: Colors.white70)),
-                            if ((data['description'] ?? '').isNotEmpty)
-                              Text("Prize: ${data['description']}",
-                                  style: const TextStyle(color: Colors.greenAccent)),
-                            const SizedBox(height: 6),
-                            const Text("Participants:",
-                                style: TextStyle(color: Colors.amber)),
-                            for (final name in participants)
-                              Text("- $name",
-                                  style: const TextStyle(
-                                      color: Colors.white60, fontSize: 12)),
-                          ],
-                        ),
-                        trailing: ElevatedButton(
-                          onPressed: () => _joinTournament(doc),
-                          child: const Text("Join"),
-                        ),
+                  return Card(
+                    color: Colors.grey[900],
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: ListTile(
+                      title: Text(data['title'] ?? 'Untitled',
+                          style: const TextStyle(fontSize: 18, color: Colors.white)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Game: ${data['game'] ?? 'N/A'}",
+                              style: const TextStyle(color: Colors.white70)),
+                          Text("Host: ${data['hostedBy'] ?? 'N/A'}",
+                              style: const TextStyle(color: Colors.white70)),
+                          Text("Entry Fee: ${data['entryFee']} KES",
+                              style: const TextStyle(color: Colors.white70)),
+                          Text("Date: ${data['date'] ?? 'N/A'}",
+                              style: const TextStyle(color: Colors.white70)),
+                          if ((data['description'] ?? '').isNotEmpty)
+                            Text("Prize: ${data['description']}",
+                                style: const TextStyle(color: Colors.greenAccent)),
+                          const SizedBox(height: 6),
+                          const Text("Participants:", style: TextStyle(color: Colors.amber)),
+                          for (final name in participants)
+                            Text("- $name",
+                                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                        ],
                       ),
-                    );
-                  } else if (_hasMore) {
-                    _loadTournaments();
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  } else {
-                    return const SizedBox(height: 20);
-                  }
-                },
-              ),
+                      trailing: ElevatedButton(
+                        onPressed: () => _joinTournament(doc),
+                        child: const Text("Join"),
+                      ),
+                    ),
+                  );
+                } else if (_hasMore) {
+                  _loadTournaments();
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                } else {
+                  return const SizedBox(height: 20);
+                }
+              },
             ),
           ),
         ],
