@@ -71,13 +71,23 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
     }
 
     try {
-      // Get user name from Firestore users collection
+      // Fetch display name from Firestore users collection
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final name = userDoc.exists
-          ? userDoc['name'] ?? user.email ?? 'Anonymous'
+          ? (userDoc['name'] ?? user.email ?? 'Anonymous')
           : user.email ?? 'Anonymous';
 
       final tournamentRef = FirebaseFirestore.instance.collection('tournaments').doc(doc.id);
+
+      // Prevent duplicate joins
+      final currentData = doc.data() as Map<String, dynamic>;
+      final currentParticipants = List<String>.from(currentData['participants'] ?? []);
+      if (currentParticipants.contains(name)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ You have already joined this tournament")),
+        );
+        return;
+      }
 
       await tournamentRef.update({
         'participants': FieldValue.arrayUnion([name])
@@ -87,7 +97,7 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
         const SnackBar(content: Text("✅ You have joined the tournament!")),
       );
 
-      setState(() {}); // Refresh to show participant
+      setState(() {}); // Refresh UI to reflect new participant
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ Failed to join: $e")),
@@ -162,8 +172,7 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
                           const SizedBox(height: 6),
                           const Text("Participants:", style: TextStyle(color: Colors.amber)),
                           for (final name in participants)
-                            Text("- $name",
-                                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                            Text("- $name", style: const TextStyle(color: Colors.white60, fontSize: 12)),
                         ],
                       ),
                       trailing: ElevatedButton(
