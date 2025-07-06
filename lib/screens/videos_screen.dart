@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'app_drawer.dart'; // ✅ Correct path (if in same folder)
-
+import 'app_drawer.dart'; // ✅ Make sure this file exists in the same folder
 
 class VideosScreen extends StatelessWidget {
   const VideosScreen({super.key});
@@ -9,16 +8,17 @@ class VideosScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Videos'),
+        title: const Text('GAMMER'),
         backgroundColor: Colors.black,
       ),
-      drawer: const AppDrawer(), // ← Make sure this is added
+      drawer: const AppDrawer(), // ✅ Navigation drawer
       body: const Center(
         child: Text(
           'Video Feed Coming Soon',
-          style: TextStyle(fontSize: 20),
+          style: TextStyle(fontSize: 20, color: Colors.white),
         ),
       ),
+      backgroundColor: Colors.black, // ✅ Ensures dark background
     );
   }
 }

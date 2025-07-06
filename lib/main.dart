@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'firebase_options.dart'; // ✅ Add this import
+
 import 'screens/videos_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
@@ -15,15 +17,24 @@ import 'screens/host_tournament_screen.dart';
 import 'services/firebase_messaging_service.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  // Handle background notifications here (optional)
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  debugPrint("🔔 Background Message: ${message.notification?.title}");
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
 
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform, // ✅ Use correct config
+    );
+
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint("🔥 Firebase init failed: $e");
+  }
 
   runApp(const MyApp());
 }
@@ -64,11 +75,15 @@ class _EntryScreenState extends State<EntryScreen> {
   @override
   void initState() {
     super.initState();
-    FirebaseMessagingService.initialize(context);
+    try {
+      FirebaseMessagingService.initialize(context);
+    } catch (e) {
+      debugPrint("⚠️ FirebaseMessaging init error: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const VideosScreen();
+    return const VideosScreen(); // ✅ Still accessible without login
   }
 }

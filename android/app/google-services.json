@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "439860969536",
-    "project_id": "tournhost-c0860",
-    "storage_bucket": "tournhost-c0860.firebasestorage.app"
+    "project_number": "563746270812",
+    "project_id": "gammer-fixed",
+    "storage_bucket": "gammer-fixed.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:439860969536:android:4b96b243b2b396bbfc5fa5",
+        "mobilesdk_app_id": "1:563746270812:android:5f6c59f95ed573fb640099",
         "android_client_info": {
           "package_name": "com.example.gammer_fixed"
         }
@@ -15,45 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCZtIdPVG7WxaHNQwb6HkGX6MQmOMFDSZI"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:439860969536:android:329c0f61cd9d4944fc5fa5",
-        "android_client_info": {
-          "package_name": "com.ghost.codtournament"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCZtIdPVG7WxaHNQwb6HkGX6MQmOMFDSZI"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:439860969536:android:960dec29fe4894e7fc5fa5",
-        "android_client_info": {
-          "package_name": "com.lucky.codtournament"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCZtIdPVG7WxaHNQwb6HkGX6MQmOMFDSZI"
+          "current_key": "AIzaSyB5bk_DqHgc4yN1wT4iWZUZrvpmMCcMwpw"
         }
       ],
       "services": {

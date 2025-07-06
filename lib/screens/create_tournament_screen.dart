@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../helpers/auth_guard.dart';
+import '../widgets/navigation_drawer.dart';
 
 class CreateTournamentScreen extends StatefulWidget {
   const CreateTournamentScreen({super.key});
@@ -10,43 +14,64 @@ class CreateTournamentScreen extends StatefulWidget {
 
 class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   final nameController = TextEditingController();
+  bool isLoading = false;
 
   Future<void> createTournament() async {
-    if (nameController.text.isEmpty) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || nameController.text.trim().isEmpty) return;
 
-    await FirebaseFirestore.instance.collection('tournaments').add({
-      'name': nameController.text.trim(),
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    setState(() => isLoading = true);
 
-    // ✅ Correct usage: mounted is from State class
-    if (!mounted) return;
+    try {
+      await FirebaseFirestore.instance.collection('tournaments').add({
+        'name': nameController.text.trim(),
+        'createdBy': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tournament created')),
-    );
+      if (!mounted) return;
 
-    nameController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Tournament created')),
+      );
+
+      nameController.clear();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Error: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Create Tournament')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Tournament Name'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: createTournament,
-              child: const Text('Create'),
-            ),
-          ],
+    return AuthGuard.guard(
+      context,
+      Scaffold(
+        appBar: AppBar(title: const Text('Create Tournament')),
+        drawer: const NavigationDrawerWidget(),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Tournament Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: isLoading ? null : createTournament,
+                child: isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Create Tournament'),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -17,43 +17,64 @@ class AppDrawer extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontSize: 24),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.ondemand_video, color: Colors.white),
-            title: const Text('Watch Videos'),
-            onTap: () => Navigator.pushNamed(context, '/home'),
+          _buildDrawerItem(
+            context,
+            icon: Icons.ondemand_video,
+            label: 'Watch Videos',
+            routeName: '/home',
           ),
-          ListTile(
-            leading: const Icon(Icons.file_upload, color: Colors.white),
-            title: const Text('Upload Video'),
-            onTap: () => Navigator.pushNamed(context, '/upload'),
+          _buildDrawerItem(
+            context,
+            icon: Icons.file_upload,
+            label: 'Upload Video',
+            routeName: '/upload',
           ),
-          ListTile(
-            leading: const Icon(Icons.live_tv, color: Colors.white),
-            title: const Text('Go Live'),
-            onTap: () => Navigator.pushNamed(context, '/live'),
+          _buildDrawerItem(
+            context,
+            icon: Icons.live_tv,
+            label: 'Go Live',
+            routeName: '/live',
           ),
-          ListTile(
-            leading: const Icon(Icons.emoji_events, color: Colors.white),
-            title: const Text('Create Tournament'),
-            onTap: () => Navigator.pushNamed(context, '/create_tournament'),
+          const Divider(color: Colors.white30),
+          _buildDrawerItem(
+            context,
+            icon: Icons.emoji_events,
+            label: 'Create Tournament',
+            routeName: '/create_tournament',
           ),
-          ListTile(
-            leading: const Icon(Icons.group, color: Colors.white),
-            title: const Text('Join Tournament'),
-            onTap: () => Navigator.pushNamed(context, '/join_tournament'),
+          _buildDrawerItem(
+            context,
+            icon: Icons.group,
+            label: 'Join Tournament',
+            routeName: '/join_tournament',
           ),
-          ListTile(
-            leading: const Icon(Icons.admin_panel_settings, color: Colors.white),
-            title: const Text('Host Tournament'),
-            onTap: () => Navigator.pushNamed(context, '/host_tournament'),
+          _buildDrawerItem(
+            context,
+            icon: Icons.admin_panel_settings,
+            label: 'Host Tournament',
+            routeName: '/host_tournament',
           ),
-          ListTile(
-            leading: const Icon(Icons.person, color: Colors.white),
-            title: const Text('Profile'),
-            onTap: () => Navigator.pushNamed(context, '/profile'),
+          const Divider(color: Colors.white30),
+          _buildDrawerItem(
+            context,
+            icon: Icons.person,
+            label: 'Profile',
+            routeName: '/profile',
           ),
         ],
       ),
+    );
+  }
+
+  ListTile _buildDrawerItem(BuildContext context,
+      {required IconData icon, required String label, required String routeName}) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white),
+      title: Text(label, style: const TextStyle(color: Colors.white)),
+      onTap: () {
+        Navigator.pop(context); // ✅ Close drawer
+        Navigator.pushNamed(context, routeName);
+      },
     );
   }
 }

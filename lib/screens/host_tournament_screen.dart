@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../helpers/auth_guard.dart';
+import '../widgets/navigation_drawer.dart';
+
 class HostTournamentScreen extends StatefulWidget {
   const HostTournamentScreen({super.key});
 
@@ -26,84 +29,93 @@ class _HostTournamentScreenState extends State<HostTournamentScreen> {
   }
 
   Future<void> _submitTournament() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final user = FirebaseAuth.instance.currentUser;
+    if (!_formKey.currentState!.validate()) return;
 
-        await FirebaseFirestore.instance.collection('tournaments').add({
-          'game': _gameController.text,
-          'title': _titleController.text,
-          'entryFee': int.parse(_entryFeeController.text),
-          'date': _dateController.text,
-          'hostedBy': user?.uid,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("❌ You must be logged in to host.")),
+      );
+      return;
+    }
 
-        if (!mounted) return;
+    try {
+      await FirebaseFirestore.instance.collection('tournaments').add({
+        'game': _gameController.text.trim(),
+        'title': _titleController.text.trim(),
+        'entryFee': int.tryParse(_entryFeeController.text.trim()) ?? 0,
+        'date': _dateController.text.trim(),
+        'hostedBy': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("🎉 Tournament Hosted Successfully")),
-        );
+      if (!mounted) return;
 
-        // Optional: Clear form
-        _gameController.clear();
-        _titleController.clear();
-        _entryFeeController.clear();
-        _dateController.clear();
-      } catch (e) {
-        if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Tournament Hosted Successfully")),
+      );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("⚠️ Failed to save: $e")),
-        );
-      }
+      _formKey.currentState!.reset();
+      _gameController.clear();
+      _titleController.clear();
+      _entryFeeController.clear();
+      _dateController.clear();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Failed: $e")),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Host Tournament")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _gameController,
-                decoration: const InputDecoration(labelText: 'Game'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter game name' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Tournament Title'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter title' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _entryFeeController,
-                decoration: const InputDecoration(labelText: 'Entry Fee (KES)'),
-                keyboardType: TextInputType.number,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter fee' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _dateController,
-                decoration: const InputDecoration(labelText: 'Date (e.g. 2025-06-30)'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter date' : null,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _submitTournament,
-                child: const Text("Host Tournament"),
-              ),
-            ],
+    return AuthGuard.guard(
+      context,
+      Scaffold(
+        appBar: AppBar(title: const Text("Host Tournament")),
+        drawer: const NavigationDrawerWidget(),
+        body: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              children: [
+                TextFormField(
+                  controller: _gameController,
+                  decoration: const InputDecoration(labelText: 'Game'),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Enter game name' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(labelText: 'Tournament Title'),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Enter title' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _entryFeeController,
+                  decoration: const InputDecoration(labelText: 'Entry Fee (KES)'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Enter entry fee' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _dateController,
+                  decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Enter date' : null,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _submitTournament,
+                  child: const Text("Host Tournament"),
+                ),
+              ],
+            ),
           ),
         ),
       ),
