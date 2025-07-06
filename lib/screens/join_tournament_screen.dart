@@ -1,116 +1,154 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-class JoinTournamentScreen extends StatelessWidget {
+class JoinTournamentScreen extends StatefulWidget {
   const JoinTournamentScreen({super.key});
 
-  void _joinTournament(String tournamentId, String userId) async {
-    final docRef = FirebaseFirestore.instance
-        .collection('tournaments')
-        .doc(tournamentId);
+  @override
+  State<JoinTournamentScreen> createState() => _JoinTournamentScreenState();
+}
 
-    final joinedRef = docRef.collection('joinedUsers').doc(userId);
+class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final int _pageSize = 10;
 
-    final alreadyJoined = await joinedRef.get();
+  List<DocumentSnapshot> _tournaments = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDoc;
 
-    if (!alreadyJoined.exists) {
-      await joinedRef.set({
-        'userId': userId,
-        'joinedAt': Timestamp.now(),
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadTournaments();
   }
 
-  void _showJoinedUsers(BuildContext context, String tournamentId) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('tournaments')
-              .doc(tournamentId)
-              .collection('joinedUsers')
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+  Future<void> _loadTournaments({bool isRefresh = false}) async {
+    if (_isLoading || (!_hasMore && !isRefresh)) return;
 
-            final users = snapshot.data!.docs;
+    setState(() => _isLoading = true);
 
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text(
-                  'Joined Users:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                const SizedBox(height: 10),
-                ...users.map((doc) {
-                  final userId = doc['userId'];
-                  return ListTile(
-                    title: Text(userId),
-                  );
-                }),
-              ],
-            );
-          },
-        );
-      },
-    );
+    Query query = FirebaseFirestore.instance
+        .collection('tournaments')
+        .orderBy('timestamp', descending: true)
+        .limit(_pageSize);
+
+    if (_lastDoc != null && !isRefresh) {
+      query = query.startAfterDocument(_lastDoc!);
+    }
+
+    final snapshot = await query.get();
+
+    if (isRefresh) {
+      _tournaments = snapshot.docs;
+    } else {
+      _tournaments.addAll(snapshot.docs);
+    }
+
+    if (snapshot.docs.length < _pageSize) _hasMore = false;
+    if (_tournaments.isNotEmpty) _lastDoc = _tournaments.last;
+
+    setState(() => _isLoading = false);
+  }
+
+  List<DocumentSnapshot> _filterTournaments(String search) {
+    return _tournaments.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final title = data['title']?.toLowerCase() ?? '';
+      final host = data['hostedBy']?.toLowerCase() ?? '';
+      return title.contains(search.toLowerCase()) || host.contains(search.toLowerCase());
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Join Tournament')),
-        body: const Center(
-          child: Text('Please log in to view and join tournaments.'),
-        ),
-      );
-    }
+    final filteredTournaments = _searchController.text.isEmpty
+        ? _tournaments
+        : _filterTournaments(_searchController.text);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Join Tournament')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('tournaments')
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-          final tournaments = snapshot.data!.docs;
-
-          if (tournaments.isEmpty) {
-            return const Center(child: Text('No tournaments available.'));
-          }
-
-          return ListView.builder(
-            itemCount: tournaments.length,
-            itemBuilder: (context, index) {
-              final doc = tournaments[index];
-              final data = doc.data() as Map<String, dynamic>;
-
-              return Card(
-                margin: const EdgeInsets.all(10),
-                child: ListTile(
-                  title: Text(data['name'] ?? 'No Name'),
-                  subtitle: Text(data['description'] ?? ''),
-                  trailing: ElevatedButton(
-                    onPressed: () {
-                      _joinTournament(doc.id, user.uid);
-                      _showJoinedUsers(context, doc.id);
-                    },
-                    child: const Text('Join'),
-                  ),
-                ),
-              );
+      appBar: AppBar(
+        title: const Text('Join Tournament'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              _tournaments.clear();
+              _lastDoc = null;
+              _hasMore = true;
+              _loadTournaments(isRefresh: true);
             },
-          );
-        },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search by title or host...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() {}),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filteredTournaments.length + 1,
+              itemBuilder: (context, index) {
+                if (index < filteredTournaments.length) {
+                  final doc = filteredTournaments[index];
+                  final data = doc.data() as Map<String, dynamic>;
+
+                  return Card(
+                    color: Colors.grey[900],
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: ListTile(
+                      title: Text(data['title'] ?? 'Untitled',
+                          style: const TextStyle(fontSize: 18, color: Colors.white)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Game: ${data['game'] ?? 'N/A'}",
+                              style: const TextStyle(color: Colors.white70)),
+                          Text("Host: ${data['hostedBy'] ?? 'N/A'}",
+                              style: const TextStyle(color: Colors.white70)),
+                          Text("Entry Fee: ${data['entryFee']} KES",
+                              style: const TextStyle(color: Colors.white70)),
+                          Text("Date: ${data['date'] ?? 'N/A'}",
+                              style: const TextStyle(color: Colors.white70)),
+                          if ((data['description'] ?? '').isNotEmpty)
+                            Text("Prize: ${data['description']}",
+                                style: const TextStyle(color: Colors.greenAccent)),
+                        ],
+                      ),
+                      trailing: ElevatedButton(
+                        onPressed: () {
+                          // TODO: Add logic to join the tournament and store in Firestore
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("✅ Joined tournament")),
+                          );
+                        },
+                        child: const Text("Join"),
+                      ),
+                    ),
+                  );
+                } else if (_hasMore) {
+                  _loadTournaments();
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                } else {
+                  return const SizedBox(height: 20);
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
