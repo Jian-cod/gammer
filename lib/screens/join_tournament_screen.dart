@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JoinTournamentScreen extends StatefulWidget {
@@ -60,6 +61,33 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
     }).toList();
   }
 
+  Future<void> _joinTournament(DocumentSnapshot doc) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("⚠️ Please log in to join")),
+      );
+      return;
+    }
+
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final displayName = userDoc['displayName'] ?? user.email ?? 'Unknown';
+
+    final docRef =
+        FirebaseFirestore.instance.collection('tournaments').doc(doc.id);
+
+    await docRef.update({
+      'participants': FieldValue.arrayUnion([displayName])
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("✅ Joined tournament")),
+    );
+    setState(() {}); // Reload UI to show participant
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredTournaments = _searchController.text.isEmpty
@@ -102,6 +130,7 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
                 if (index < filteredTournaments.length) {
                   final doc = filteredTournaments[index];
                   final data = doc.data() as Map<String, dynamic>;
+                  final participants = List<String>.from(data['participants'] ?? []);
 
                   return Card(
                     color: Colors.grey[900],
@@ -123,15 +152,18 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
                           if ((data['description'] ?? '').isNotEmpty)
                             Text("Prize: ${data['description']}",
                                 style: const TextStyle(color: Colors.greenAccent)),
+
+                          const SizedBox(height: 6),
+                          const Text("Participants:",
+                              style: TextStyle(color: Colors.amber)),
+                          for (final name in participants)
+                            Text("- $name",
+                                style: const TextStyle(
+                                    color: Colors.white60, fontSize: 12)),
                         ],
                       ),
                       trailing: ElevatedButton(
-                        onPressed: () {
-                          // TODO: Add logic to join the tournament and store in Firestore
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("✅ Joined tournament")),
-                          );
-                        },
+                        onPressed: () => _joinTournament(doc),
                         child: const Text("Join"),
                       ),
                     ),

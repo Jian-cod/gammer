@@ -10,53 +10,81 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
 
-  Future<void> signup() async {
+  Future<void> _signup() async {
+    if (!_formKey.currentState!.validate()) return;
+
     try {
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim());
 
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-        'email': emailController.text.trim(),
-        'role': 'user',
-      });
+      final user = userCredential.user;
+      if (user != null) {
+        // Save user profile to Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'uid': user.uid,
+          'email': user.email,
+          'name': _nameController.text.trim(),
+        });
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        if (context.mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Signup failed: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('⚠️ Error: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Signup')),
+      appBar: AppBar(title: const Text('Sign Up')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: signup, child: const Text('Sign Up')),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Display Name'),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter name' : null,
+              ),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter email' : null,
+              ),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password'),
+                validator: (value) =>
+                    value == null || value.length < 6
+                        ? 'Minimum 6 characters'
+                        : null,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _signup,
+                child: const Text('Create Account'),
+              ),
+            ],
+          ),
         ),
       ),
     );
