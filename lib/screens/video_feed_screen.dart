@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:video_player/video_player.dart';
+
 import 'reply_screen.dart';
-import 'app_drawer.dart'; // ✅ Drawer menu
+import 'app_drawer.dart';
 
 class VideoFeedScreen extends StatelessWidget {
   const VideoFeedScreen({super.key});
@@ -15,7 +16,8 @@ class VideoFeedScreen extends StatelessWidget {
         title: const Text('GAMMER - Videos'),
         backgroundColor: Colors.black,
       ),
-      drawer: const AppDrawer(), // ✅ Added drawer here
+      drawer: const AppDrawer(),
+      backgroundColor: Colors.black,
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('videos')
@@ -23,6 +25,7 @@ class VideoFeedScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
           final videos = snapshot.data!.docs;
 
           return PageView.builder(
@@ -30,15 +33,7 @@ class VideoFeedScreen extends StatelessWidget {
             itemCount: videos.length,
             itemBuilder: (context, index) {
               final videoData = videos[index];
-              final videoUrl = videoData['videoUrl'];
-              final likes = videoData['likes'] ?? 0;
-              final videoId = videoData.id;
-
-              return VideoPlayerItem(
-                videoUrl: videoUrl,
-                likes: likes,
-                videoId: videoId,
-              );
+              return VideoPlayerItem(videoData: videoData);
             },
           );
         },
@@ -48,16 +43,9 @@ class VideoFeedScreen extends StatelessWidget {
 }
 
 class VideoPlayerItem extends StatefulWidget {
-  final String videoUrl;
-  final int likes;
-  final String videoId;
+  final DocumentSnapshot videoData;
 
-  const VideoPlayerItem({
-    super.key,
-    required this.videoUrl,
-    required this.likes,
-    required this.videoId,
-  });
+  const VideoPlayerItem({super.key, required this.videoData});
 
   @override
   State<VideoPlayerItem> createState() => _VideoPlayerItemState();
@@ -65,24 +53,29 @@ class VideoPlayerItem extends StatefulWidget {
 
 class _VideoPlayerItemState extends State<VideoPlayerItem> {
   late VideoPlayerController _controller;
-  late int _likes;
+  int _likes = 0;
+  late String _videoId;
+  late String _videoUrl;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+
+    _videoId = widget.videoData.id;
+    _videoUrl = widget.videoData['videoUrl'];
+    _likes = widget.videoData['likes'] ?? 0;
+
+    _controller = VideoPlayerController.networkUrl(Uri.parse(_videoUrl))
       ..initialize().then((_) {
         setState(() {});
         _controller.play();
         _controller.setLooping(true);
       });
-
-    _likes = widget.likes;
   }
 
   void _likeVideo() async {
-    final videoRef = FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
-    await videoRef.update({'likes': FieldValue.increment(1)});
+    final ref = FirebaseFirestore.instance.collection('videos').doc(_videoId);
+    await ref.update({'likes': FieldValue.increment(1)});
     setState(() {
       _likes += 1;
     });
@@ -90,11 +83,12 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
   void _showCommentsDialog() {
     final commentController = TextEditingController();
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.black,
       builder: (context) {
         return SafeArea(
           child: Padding(
@@ -103,31 +97,31 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('Comments', style: TextStyle(fontSize: 20)),
+                  padding: EdgeInsets.all(8),
+                  child: Text('Comments', style: TextStyle(fontSize: 20, color: Colors.white)),
                 ),
-                StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('videos')
-                      .doc(widget.videoId)
-                      .collection('comments')
-                      .orderBy('timestamp', descending: true)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const CircularProgressIndicator();
-                    final comments = snapshot.data!.docs;
+                SizedBox(
+                  height: 250,
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('videos')
+                        .doc(_videoId)
+                        .collection('comments')
+                        .orderBy('timestamp', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const CircularProgressIndicator();
+                      final comments = snapshot.data!.docs;
 
-                    return SizedBox(
-                      height: 200,
-                      child: ListView.builder(
+                      return ListView.builder(
                         itemCount: comments.length,
                         itemBuilder: (context, index) {
                           final comment = comments[index];
-                          final text = comment['text'];
+                          final text = comment['text'] ?? '';
                           final commentId = comment.id;
 
                           return ListTile(
-                            title: Text(text),
+                            title: Text(text, style: const TextStyle(color: Colors.white)),
                             trailing: IconButton(
                               icon: const Icon(Icons.reply, color: Colors.blue),
                               onPressed: () {
@@ -135,7 +129,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => ReplyScreen(
-                                      videoId: widget.videoId,
+                                      videoId: _videoId,
                                       commentId: commentId,
                                     ),
                                   ),
@@ -144,9 +138,9 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                             ),
                           );
                         },
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(8),
@@ -155,17 +149,21 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                       Expanded(
                         child: TextField(
                           controller: commentController,
-                          decoration: const InputDecoration(hintText: 'Add a comment...'),
+                          decoration: const InputDecoration(
+                            hintText: 'Add a comment...',
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.send),
+                        icon: const Icon(Icons.send, color: Colors.redAccent),
                         onPressed: () async {
                           final text = commentController.text.trim();
                           if (text.isNotEmpty) {
                             await FirebaseFirestore.instance
                                 .collection('videos')
-                                .doc(widget.videoId)
+                                .doc(_videoId)
                                 .collection('comments')
                                 .add({
                               'text': text,
@@ -196,15 +194,18 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   @override
   Widget build(BuildContext context) {
     return Stack(
+      fit: StackFit.expand,
       children: [
-        Center(
-          child: _controller.value.isInitialized
-              ? AspectRatio(
-                  aspectRatio: _controller.value.aspectRatio,
+        _controller.value.isInitialized
+            ? FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _controller.value.size.width,
+                  height: _controller.value.size.height,
                   child: VideoPlayer(_controller),
-                )
-              : const CircularProgressIndicator(),
-        ),
+                ),
+              )
+            : const Center(child: CircularProgressIndicator()),
         Positioned(
           right: 20,
           bottom: 100,
@@ -214,7 +215,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 icon: const Icon(Icons.favorite, color: Colors.red, size: 30),
                 onPressed: _likeVideo,
               ),
-              Text('$_likes', style: const TextStyle(fontSize: 16)),
+              Text('$_likes', style: const TextStyle(color: Colors.white)),
               const SizedBox(height: 20),
               IconButton(
                 icon: const Icon(Icons.comment, color: Colors.white, size: 28),

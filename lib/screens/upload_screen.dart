@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
@@ -39,23 +42,53 @@ class _UploadScreenState extends State<UploadScreen> {
       _uploadProgress = 0.0;
     });
 
-    // 🔧 Simulated upload (we’ll replace with real Firebase code later)
-    for (int i = 0; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      setState(() {
-        _uploadProgress = i / 10;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please log in to upload.")),
+        );
+        return;
+      }
+
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final ref = FirebaseStorage.instance.ref().child('videos/$fileName');
+      final uploadTask = ref.putFile(_videoFile!);
+
+      uploadTask.snapshotEvents.listen((event) {
+        setState(() {
+          _uploadProgress = event.bytesTransferred / event.totalBytes;
+        });
       });
+
+      final snapshot = await uploadTask.whenComplete(() {});
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Store video info in Firestore
+      await FirebaseFirestore.instance.collection('videos').add({
+        'videoUrl': downloadUrl,
+        'likes': [],
+        'timestamp': FieldValue.serverTimestamp(),
+        'uid': user.uid,
+      });
+
+      setState(() {
+        _isUploading = false;
+        _videoFile = null;
+        _uploadProgress = 0.0;
+        _videoController?.dispose();
+        _videoController = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Video uploaded successfully!')),
+      );
+    } catch (e) {
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Upload failed: $e')),
+      );
     }
-
-    setState(() {
-      _isUploading = false;
-      _videoFile = null;
-      _uploadProgress = 0.0;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Video uploaded (simulated)')),
-    );
   }
 
   @override
@@ -105,7 +138,7 @@ class _UploadScreenState extends State<UploadScreen> {
                           ? LinearProgressIndicator(value: _uploadProgress)
                           : ElevatedButton(
                               onPressed: _uploadVideo,
-                              child: const Text('Upload'),
+                              child: const Text('Upload to GAMMER'),
                             ),
                     ],
                   ),
