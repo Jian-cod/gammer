@@ -8,52 +8,82 @@ class FirebaseMessagingService {
   static final _localNotificationsPlugin = fln.FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize(BuildContext context) async {
+    // 🔒 Request permission (iOS)
     await _firebaseMessaging.requestPermission();
 
     final token = await _firebaseMessaging.getToken();
-    debugPrint("FCM Token: $token");
+    debugPrint("🔐 FCM Token: $token");
 
+    // ✅ Initialize local notifications (Android)
     const androidSettings = fln.AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = fln.InitializationSettings(android: androidSettings);
-    await _localNotificationsPlugin.initialize(initSettings);
+    await _localNotificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        debugPrint("🔔 Notification tapped (local)");
+        // TODO: Handle direct navigation if needed
+      },
+    );
 
-    // Foreground message
+    // ✅ Foreground messages
     FirebaseMessaging.onMessage.listen((message) {
       final notification = message.notification;
-      if (notification != null) {
+      final data = message.data;
+
+      if (data['type'] == 'chat' && data['senderName'] != null) {
+        _showNotification(RemoteNotification(
+          title: data['senderName'],
+          body: 'New message',
+        ));
+      } else if (data['type'] == 'like' && data['senderName'] != null) {
+        _showNotification(RemoteNotification(
+          title: data['senderName'],
+          body: 'liked your post',
+        ));
+      } else if (notification != null) {
         _showNotification(notification);
       }
     });
 
-    // App launched from terminated
-    FirebaseMessaging.instance.getInitialMessage().then((message) {
-      final notification = message?.notification;
-      if (notification != null) {
-        SchedulerBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) {
-            _showDialog(context, notification.title ?? '', notification.body ?? '');
-          }
-        });
-      }
-    });
-
-    // App resumed from background
+    // ✅ App opened from background
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       final notification = message.notification;
-      if (notification != null) {
-        SchedulerBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) {
+      final data = message.data;
+
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          if (data['type'] == 'chat' && data['senderName'] != null) {
+            _showDialog(context, data['senderName'], 'New message');
+          } else if (notification != null) {
             _showDialog(context, notification.title ?? '', notification.body ?? '');
           }
-        });
-      }
+        }
+      });
     });
+
+    // ✅ App launched from terminated state
+    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
+      final notification = initialMessage.notification;
+      final data = initialMessage.data;
+
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          if (data['type'] == 'chat' && data['senderName'] != null) {
+            _showDialog(context, data['senderName'], 'New message');
+          } else if (notification != null) {
+            _showDialog(context, notification.title ?? '', notification.body ?? '');
+          }
+        }
+      });
+    }
   }
 
   static Future<void> _showNotification(RemoteNotification notification) async {
     const androidDetails = fln.AndroidNotificationDetails(
       'channel_id',
       'GAMMER Notifications',
+      channelDescription: 'This channel is used for GAMMER push notifications',
       importance: fln.Importance.max,
       priority: fln.Priority.high,
     );

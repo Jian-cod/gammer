@@ -33,7 +33,7 @@ class NavigationDrawerWidget extends StatelessWidget {
             onTap: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const UploadScreen()),
+                MaterialPageRoute(builder: (context) => UploadScreen()),
               );
             },
           ),

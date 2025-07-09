@@ -8,10 +8,13 @@ class AuthGuard {
     if (user != null) {
       return guardedPage; // ✅ User is logged in
     } else {
-      // ❌ User is not logged in, redirect to login
-      Future.microtask(() {
-        Navigator.of(context).pushReplacementNamed('/login');
+      // ❌ User is not logged in, redirect after build frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
       });
+
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );

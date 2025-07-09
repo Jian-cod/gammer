@@ -29,40 +29,55 @@ class DmRequestsScreen extends StatelessWidget {
               final doc = docs[index];
               final fromUserId = doc['from'];
 
-              return ListTile(
-                title: Text('From: $fromUserId'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check),
-                      onPressed: () async {
-                        FirestoreService.respondDmRequest(doc.id, true);
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance.collection('users').doc(fromUserId).get(),
+                builder: (context, userSnap) {
+                  if (!userSnap.hasData || !userSnap.data!.exists) {
+  return const ListTile(title: Text('Loading...'));
+}
 
-                        final chatId = await FirestoreService.openChat({uid, fromUserId}, false);
+final fromName = userSnap.data!.get('name') ?? 'Unknown';
 
-                        // 🛡️ Protect against use_build_context_synchronously
-                        if (!context.mounted) return;
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatScreen(
-                              chatId: chatId,
-                              members: [uid, fromUserId],
-                            ),
-                          ),
-                        );
-                      },
+                  return ListTile(
+                    title: Text('From: $fromName'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.check),
+                          onPressed: () async {
+                            await FirestoreService.respondDmRequest(doc.id, true);
+
+                            final chatId = await FirestoreService.openChat(
+                              {uid, fromUserId},
+                              true,
+                            );
+
+                            if (!context.mounted) return;
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  chatId: chatId,
+                                  receiverId: fromUserId,
+                                  receiverName: fromName,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            FirestoreService.respondDmRequest(doc.id, false);
+                          },
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        FirestoreService.respondDmRequest(doc.id, false);
-                      },
-                    ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           );

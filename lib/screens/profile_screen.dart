@@ -1,47 +1,115 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../widgets/navigation_drawer.dart';
-import '../helpers/auth_guard.dart'; // ✅ Import the AuthGuard
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
-class ProfileScreen extends StatelessWidget {
+import '../widgets/navigation_drawer.dart';
+import '../helpers/auth_guard.dart';
+
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return AuthGuard.guard( // ✅ Wrap the screen with the guard
-      context,
-      Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-        ),
-        drawer: const NavigationDrawerWidget(),
-        body: Center(
-          child: _buildProfileContent(),
-        ),
-      ),
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final currentUser = FirebaseAuth.instance.currentUser!;
+  final nameController = TextEditingController();
+  String? imageUrl;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+    final data = doc.data();
+    if (data != null) {
+      nameController.text = data['name'] ?? '';
+      imageUrl = data['imageUrl'];
+    }
+    setState(() => isLoading = false);
+  }
+
+  Future<void> _updateProfile() async {
+    await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).update({
+      'name': nameController.text.trim(),
+      if (imageUrl != null) 'imageUrl': imageUrl,
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("✅ Profile updated")),
     );
   }
 
-  Widget _buildProfileContent() {
-    final user = FirebaseAuth.instance.currentUser;
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
+    if (picked == null) return;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.person, size: 100, color: Colors.white),
-        const SizedBox(height: 20),
-        Text(
-          user?.email ?? 'No email available',
-          style: const TextStyle(fontSize: 18),
-        ),
-        const SizedBox(height: 30),
-        ElevatedButton(
-          onPressed: () async {
-            await FirebaseAuth.instance.signOut();
-          },
-          child: const Text('Logout'),
-        ),
-      ],
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('profile_pics')
+        .child('${currentUser.uid}.jpg');
+
+    await ref.putFile(File(picked.path));
+    imageUrl = await ref.getDownloadURL();
+    setState(() {}); // Refresh UI
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AuthGuard.guard(
+      context,
+      Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        drawer: const NavigationDrawerWidget(),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickAndUploadImage,
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.grey,
+                        backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
+                        child: imageUrl == null
+                            ? const Icon(Icons.person, size: 50, color: Colors.white)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Display Name'),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _updateProfile,
+                      child: const Text("Save Changes"),
+                    ),
+                    const SizedBox(height: 20),
+                    Text("Email: ${currentUser.email}", style: const TextStyle(fontSize: 16)),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      onPressed: () async => await FirebaseAuth.instance.signOut(),
+                      child: const Text("Logout"),
+                    ),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 }

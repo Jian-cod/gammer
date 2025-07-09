@@ -1,65 +1,134 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../services/chat_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
-  final List<String> members;
-  const ChatScreen({required this.chatId, required this.members, super.key});
-  @override State<ChatScreen> createState() => _ChatScreenState();
+  final String receiverId;
+  final String receiverName;
+
+  const ChatScreen({
+    super.key,
+    required this.chatId,
+    required this.receiverId,
+    required this.receiverName,
+  });
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final msgController = TextEditingController();
-  @override Widget build(BuildContext c) {
+  final TextEditingController _messageController = TextEditingController();
+  final currentUser = FirebaseAuth.instance.currentUser;
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    final message = {
+      'text': text,
+      'senderId': currentUser!.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+
+    final chatRef = FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+
+    // Create chat doc if it doesn't exist
+    final chatDoc = await chatRef.get();
+    if (!chatDoc.exists) {
+      await chatRef.set({
+        'users': [currentUser!.uid, widget.receiverId],
+        'lastMessage': text,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await chatRef.update({
+        'lastMessage': text,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await chatRef.collection('messages').add(message);
+    _messageController.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chatRef = FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true);
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.members.length == 2 ? 'Chat' : 'Group Chat')),
-      body: Column(children: [
-        Expanded(child: StreamBuilder(
-          stream: FirestoreService.fetchMessages(widget.chatId),
-          builder: (c, snap) {
-            if (!snap.hasData) return const SizedBox();
-            return ListView(
-              reverse: true,
-              children: snap.data!.docs.map((d) {
-                final text = d['text'];
-                final from = d['from'];
-                final isMine = from == FirestoreService.currentUserId();
-                return ListTile(
-                  title: Align(
-                    alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isMine ? Colors.blue : Colors.grey,
-                        borderRadius: BorderRadius.circular(8),
+      appBar: AppBar(
+        title: Text(widget.receiverName),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: chatRef.snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final messages = snapshot.data!.docs;
+
+                return ListView.builder(
+                  reverse: true,
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index].data() as Map<String, dynamic>;
+                    final isMe = msg['senderId'] == currentUser!.uid;
+
+                    return Align(
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isMe ? Colors.blueAccent : Colors.grey[700],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          msg['text'] ?? '',
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
-                      child: Text(text),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: const InputDecoration(
+                      hintText: "Type a message...",
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                );
-              }).toList(),
-            );
-          },
-        )),
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(children: [
-            Expanded(
-              child: TextField(controller: msgController, decoration: const InputDecoration(hintText: 'Message')),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _sendMessage,
+                ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.send), 
-              onPressed: () {
-                final t = msgController.text.trim();
-                if (t.isNotEmpty) {
-                  FirestoreService.sendMessage(widget.chatId, t);
-                  msgController.clear();
-                }
-              },
-            )
-          ]),
-        )
-      ]),
+          ),
+        ],
+      ),
     );
   }
 }
