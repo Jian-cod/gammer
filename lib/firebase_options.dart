@@ -41,46 +41,47 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCm89FZ-skQZSW1-uy0DBtxF3BZqHBL4sg',
-    appId: '1:563746270812:web:13a93c32ff655d51640099',
-    messagingSenderId: '563746270812',
-    projectId: 'gammer-fixed',
-    authDomain: 'gammer-fixed.firebaseapp.com',
-    storageBucket: 'gammer-fixed.firebasestorage.app',
+    apiKey: 'AIzaSyBaiyP19xTV3CdtGhrAbKsRq6atOVmCD_M',
+    appId: '1:318544045968:web:3bab38ee945f51f4793515',
+    messagingSenderId: '318544045968',
+    projectId: 'gammer-test',
+    authDomain: 'gammer-test.firebaseapp.com',
+    storageBucket: 'gammer-test.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB5bk_DqHgc4yN1wT4iWZUZrvpmMCcMwpw',
-    appId: '1:563746270812:android:5f6c59f95ed573fb640099',
-    messagingSenderId: '563746270812',
-    projectId: 'gammer-fixed',
-    storageBucket: 'gammer-fixed.firebasestorage.app',
+    apiKey: 'AIzaSyAkBRNSkv2uROKkXtW5B5BzjaHFnrrHZ4k',
+    appId: '1:318544045968:android:68203296026ac2a2793515',
+    messagingSenderId: '318544045968',
+    projectId: 'gammer-test',
+    storageBucket: 'gammer-test.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDPvhwBzvSe5bY1ZUCTN7nDvcxwI0-l468',
-    appId: '1:563746270812:ios:61c015a214773623640099',
-    messagingSenderId: '563746270812',
-    projectId: 'gammer-fixed',
-    storageBucket: 'gammer-fixed.firebasestorage.app',
+    apiKey: 'AIzaSyAJ-nWgSiTZrwX3jHHLjpJYakJAHLI2AsY',
+    appId: '1:318544045968:ios:3079bc8856575f1b793515',
+    messagingSenderId: '318544045968',
+    projectId: 'gammer-test',
+    storageBucket: 'gammer-test.firebasestorage.app',
     iosBundleId: 'com.example.gammerFixed',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDPvhwBzvSe5bY1ZUCTN7nDvcxwI0-l468',
-    appId: '1:563746270812:ios:61c015a214773623640099',
-    messagingSenderId: '563746270812',
-    projectId: 'gammer-fixed',
-    storageBucket: 'gammer-fixed.firebasestorage.app',
+    apiKey: 'AIzaSyAJ-nWgSiTZrwX3jHHLjpJYakJAHLI2AsY',
+    appId: '1:318544045968:ios:3079bc8856575f1b793515',
+    messagingSenderId: '318544045968',
+    projectId: 'gammer-test',
+    storageBucket: 'gammer-test.firebasestorage.app',
     iosBundleId: 'com.example.gammerFixed',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCm89FZ-skQZSW1-uy0DBtxF3BZqHBL4sg',
-    appId: '1:563746270812:web:91ea1882c1b551b5640099',
-    messagingSenderId: '563746270812',
-    projectId: 'gammer-fixed',
-    authDomain: 'gammer-fixed.firebaseapp.com',
-    storageBucket: 'gammer-fixed.firebasestorage.app',
+    apiKey: 'AIzaSyBaiyP19xTV3CdtGhrAbKsRq6atOVmCD_M',
+    appId: '1:318544045968:web:d214eb3a9c977fa8793515',
+    messagingSenderId: '318544045968',
+    projectId: 'gammer-test',
+    authDomain: 'gammer-test.firebaseapp.com',
+    storageBucket: 'gammer-test.firebasestorage.app',
   );
+
 }

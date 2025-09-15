@@ -1,13 +1,12 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../widgets/navigation_drawer.dart';
 import '../helpers/auth_guard.dart';
+import '../helpers/supabase_storage.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,6 +21,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? imageUrl;
   bool isLoading = true;
 
+  final picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -29,7 +30,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
     final data = doc.data();
     if (data != null) {
       nameController.text = data['name'] ?? '';
@@ -51,18 +55,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
     if (picked == null) return;
 
-    final ref = FirebaseStorage.instance
-        .ref()
-        .child('profile_pics')
-        .child('${currentUser.uid}.jpg');
+    final file = File(picked.path);
+    final url = await uploadProfilePicture(currentUser.uid, file);
 
-    await ref.putFile(File(picked.path));
-    imageUrl = await ref.getDownloadURL();
-    setState(() {}); // Refresh UI
+    if (url != null && mounted) {
+      setState(() => imageUrl = url);
+    }
   }
 
   @override
@@ -83,7 +84,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: CircleAvatar(
                         radius: 50,
                         backgroundColor: Colors.grey,
-                        backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
+                        backgroundImage:
+                            imageUrl != null ? NetworkImage(imageUrl!) : null,
                         child: imageUrl == null
                             ? const Icon(Icons.person, size: 50, color: Colors.white)
                             : null,
@@ -100,7 +102,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: const Text("Save Changes"),
                     ),
                     const SizedBox(height: 20),
-                    Text("Email: ${currentUser.email}", style: const TextStyle(fontSize: 16)),
+                    Text("Email: ${currentUser.email}",
+                        style: const TextStyle(fontSize: 16)),
                     const SizedBox(height: 30),
                     ElevatedButton(
                       onPressed: () async => await FirebaseAuth.instance.signOut(),

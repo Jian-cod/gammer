@@ -1,21 +1,21 @@
 import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../helpers/supabase_video.dart'; // Correct video helper
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
 
   @override
-  _UploadScreenState createState() => _UploadScreenState();
+  UploadScreenState createState() => UploadScreenState();
 }
 
-class _UploadScreenState extends State<UploadScreen> {
-  File? _videoFile;
+class UploadScreenState extends State<UploadScreen> {
+  XFile? _videoFile;
   VideoPlayerController? _videoController;
   bool _isUploading = false;
   double _uploadProgress = 0.0;
@@ -25,46 +25,50 @@ class _UploadScreenState extends State<UploadScreen> {
   Future<void> _pickVideo() async {
     final pickedFile = await picker.pickVideo(source: ImageSource.gallery);
     if (pickedFile != null) {
-      _videoFile = File(pickedFile.path);
-      _videoController = VideoPlayerController.file(_videoFile!)
-        ..initialize().then((_) {
-          setState(() {});
-          _videoController?.play();
-        });
+      _videoFile = pickedFile;
+
+      if (!kIsWeb) {
+        final file = File(_videoFile!.path);
+        _videoController = VideoPlayerController.file(file)
+          ..initialize().then((_) {
+            setState(() {});
+            _videoController?.play();
+          });
+      }
     }
   }
 
   Future<void> _uploadVideo() async {
-    if (_videoFile == null) return;
+    if (_videoFile == null || kIsWeb) return;
 
     setState(() {
       _isUploading = true;
       _uploadProgress = 0.0;
     });
 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please log in to upload.")),
+      );
+      setState(() => _isUploading = false);
+      return;
+    }
+
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final file = File(_videoFile!.path);
+      final downloadUrl = await uploadVideoFile(user.uid, file);
+
+      if (downloadUrl == null) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please log in to upload.")),
+          const SnackBar(content: Text('❌ Upload failed')),
         );
+        setState(() => _isUploading = false);
         return;
       }
 
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
-      final ref = FirebaseStorage.instance.ref().child('videos/$fileName');
-      final uploadTask = ref.putFile(_videoFile!);
-
-      uploadTask.snapshotEvents.listen((event) {
-        setState(() {
-          _uploadProgress = event.bytesTransferred / event.totalBytes;
-        });
-      });
-
-      final snapshot = await uploadTask.whenComplete(() {});
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-
-      // Store video info in Firestore
       await FirebaseFirestore.instance.collection('videos').add({
         'videoUrl': downloadUrl,
         'likes': [],
@@ -75,16 +79,17 @@ class _UploadScreenState extends State<UploadScreen> {
       setState(() {
         _isUploading = false;
         _videoFile = null;
-        _uploadProgress = 0.0;
         _videoController?.dispose();
         _videoController = null;
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ Video uploaded successfully!')),
       );
     } catch (e) {
       setState(() => _isUploading = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('❌ Upload failed: $e')),
       );
@@ -101,10 +106,7 @@ class _UploadScreenState extends State<UploadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('Upload Video'),
-        backgroundColor: Colors.black,
-      ),
+      appBar: AppBar(title: const Text('Upload Video'), backgroundColor: Colors.black),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -135,7 +137,7 @@ class _UploadScreenState extends State<UploadScreen> {
                       ),
                       const SizedBox(height: 10),
                       _isUploading
-                          ? LinearProgressIndicator(value: _uploadProgress)
+                          ? const LinearProgressIndicator()
                           : ElevatedButton(
                               onPressed: _uploadVideo,
                               child: const Text('Upload to GAMMER'),

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "563746270812",
-    "project_id": "gammer-fixed",
-    "storage_bucket": "gammer-fixed.firebasestorage.app"
+    "project_number": "318544045968",
+    "project_id": "gammer-test",
+    "storage_bucket": "gammer-test.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:563746270812:android:5f6c59f95ed573fb640099",
+        "mobilesdk_app_id": "1:318544045968:android:68203296026ac2a2793515",
         "android_client_info": {
           "package_name": "com.example.gammer_fixed"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB5bk_DqHgc4yN1wT4iWZUZrvpmMCcMwpw"
+          "current_key": "AIzaSyAkBRNSkv2uROKkXtW5B5BzjaHFnrrHZ4k"
         }
       ],
       "services": {
