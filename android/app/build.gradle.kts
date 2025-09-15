@@ -1,41 +1,53 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
-    id("com.google.gms.google-services")
-    id("dev.flutter.flutter-gradle-plugin")
+    kotlin("android")
+    id("com.google.gms.google-services") // Firebase
 }
 
 android {
-    namespace = "com.example.gammer_fixed"
-    compileSdk = 35
+    namespace = "com.gammer.app" // <-- your actual package name
+    compileSdk = 33
 
     defaultConfig {
-        applicationId = "com.example.gammer_fixed"
+        applicationId = "com.gammer.app" // <-- your actual package name
         minSdk = 21
-        targetSdk = 35
+        targetSdk = 33
         versionCode = 1
         versionName = "1.0"
-        multiDexEnabled = true
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 
 dependencies {
-    // Required for Java 8+ features used by some plugins like flutter_local_notifications
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.10")
+    implementation("com.google.firebase:firebase-auth-ktx:22.2.2")
+    implementation("com.google.firebase:firebase-firestore-ktx:24.6.1")
+    implementation("com.google.firebase:firebase-storage-ktx:20.3.0")
+
+    // Video player
+    implementation("video_player:2.5.1")
+
+    // Image picker
+    implementation("image_picker:0.8.7+5")
+
+    // Supabase Flutter client
+    implementation("io.supabase:supabase_flutter:1.0.0") // verify latest version
 }
